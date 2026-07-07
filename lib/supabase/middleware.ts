@@ -11,7 +11,14 @@ import { publicEnv } from "@/lib/env";
 export async function updateSession(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request });
 
-  const env = publicEnv();
+  let env: ReturnType<typeof publicEnv>;
+  try {
+    env = publicEnv();
+  } catch {
+    // Supabase env not configured yet (fresh deploy): treat everyone as
+    // signed out so public pages still render instead of 500ing.
+    return gate(request, null, supabaseResponse);
+  }
   const supabase = createServerClient(
     env.NEXT_PUBLIC_SUPABASE_URL,
     env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
@@ -37,6 +44,14 @@ export async function updateSession(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser();
 
+  return gate(request, user, supabaseResponse);
+}
+
+function gate(
+  request: NextRequest,
+  user: { id: string } | null,
+  supabaseResponse: NextResponse
+) {
   const path = request.nextUrl.pathname;
   const isPublic =
     path === "/" ||
