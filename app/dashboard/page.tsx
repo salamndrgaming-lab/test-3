@@ -1,6 +1,8 @@
 import Link from "next/link";
+import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 
+import { GUEST_COOKIE, isGuestModeAvailable } from "@/lib/guest";
 import { getCurrentOrg } from "@/lib/org";
 import { createClient } from "@/lib/supabase/server";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -61,28 +63,43 @@ export default async function DashboardPage({
 }: {
   searchParams: Promise<{ stripe_connected?: string; stripe_error?: string }>;
 }) {
-  const ctx = await getCurrentOrg();
-  if (!ctx) redirect("/login");
-
   const params = await searchParams;
-  const supabase = await createClient();
 
-  const [{ data: accounts }, { data: disputes }] = await Promise.all([
-    supabase
-      .from("connected_accounts")
-      .select("id, stripe_account_id, livemode, disputes_access_verified_at, created_at")
-      .order("created_at", { ascending: false }),
-    supabase
-      .from("disputes")
-      .select(
-        "id, stripe_dispute_id, amount, currency, reason, status, stripe_status, evidence_due_by, created_at"
-      )
-      .order("created_at", { ascending: false })
-      .limit(50),
-  ]);
+  const isGuest =
+    isGuestModeAvailable() && (await cookies()).has(GUEST_COOKIE);
 
-  const connectedAccounts = (accounts ?? []) as ConnectedAccountRow[];
-  const disputeRows = (disputes ?? []) as DisputeRow[];
+  let orgName: string;
+  let email: string;
+  let connectedAccounts: ConnectedAccountRow[] = [];
+  let disputeRows: DisputeRow[] = [];
+
+  if (isGuest) {
+    orgName = "Guest workspace";
+    email = "guest (temporary)";
+  } else {
+    const ctx = await getCurrentOrg();
+    if (!ctx) redirect("/login");
+    orgName = ctx.orgName;
+    email = ctx.email;
+
+    const supabase = await createClient();
+    const [{ data: accounts }, { data: disputes }] = await Promise.all([
+      supabase
+        .from("connected_accounts")
+        .select("id, stripe_account_id, livemode, disputes_access_verified_at, created_at")
+        .order("created_at", { ascending: false }),
+      supabase
+        .from("disputes")
+        .select(
+          "id, stripe_dispute_id, amount, currency, reason, status, stripe_status, evidence_due_by, created_at"
+        )
+        .order("created_at", { ascending: false })
+        .limit(50),
+    ]);
+    connectedAccounts = (accounts ?? []) as ConnectedAccountRow[];
+    disputeRows = (disputes ?? []) as DisputeRow[];
+  }
+
   const isConnected = connectedAccounts.length > 0;
 
   return (
@@ -91,7 +108,7 @@ export default async function DashboardPage({
         <div>
           <h1 className="text-2xl font-bold tracking-tight">RecoveryEngine</h1>
           <p className="text-sm text-muted-foreground">
-            {ctx.orgName} · {ctx.email}
+            {orgName} · {email}
           </p>
         </div>
         <form action="/auth/signout" method="post">
@@ -100,6 +117,18 @@ export default async function DashboardPage({
           </Button>
         </form>
       </header>
+
+      {isGuest && (
+        <Alert>
+          <AlertTitle>Guest mode</AlertTitle>
+          <AlertDescription>
+            You&apos;re previewing the app without a database. Sign-in, Stripe
+            Connect, and dispute data activate once the Supabase and Stripe keys
+            are configured — this guest access disappears automatically at that
+            point.
+          </AlertDescription>
+        </Alert>
+      )}
 
       {params.stripe_connected && (
         <Alert variant="success">
@@ -155,6 +184,10 @@ export default async function DashboardPage({
                 <Link href="/api/stripe/connect">Connect another account</Link>
               </Button>
             </div>
+          ) : isGuest ? (
+            <Button disabled title="Configure Supabase and Stripe keys first">
+              Connect Stripe (requires setup)
+            </Button>
           ) : (
             <Button asChild>
               <Link href="/api/stripe/connect">Connect Stripe</Link>

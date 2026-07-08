@@ -1,9 +1,10 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 
-// Relative import: this file is part of the Edge middleware bundle, where
+// Relative imports: this file is part of the Edge middleware bundle, where
 // the @/ alias has failed to resolve on Vercel deploys.
 import { publicEnv } from "../env";
+import { GUEST_COOKIE, isGuestModeAvailable } from "../guest";
 
 /**
  * Refreshes the Supabase session cookie on every request and gates
@@ -61,7 +62,11 @@ function gate(
     path.startsWith("/auth") ||
     path.startsWith("/api/webhooks");
 
-  if (!user && !isPublic) {
+  // Guest sessions only count while guest mode is available; once Supabase
+  // is configured the cookie is ignored and real auth takes over.
+  const isGuest = isGuestModeAvailable() && request.cookies.has(GUEST_COOKIE);
+
+  if (!user && !isGuest && !isPublic) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
     url.searchParams.set("next", path);

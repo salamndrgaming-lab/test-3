@@ -30,7 +30,15 @@ function friendlyError(err: unknown): string {
   return message;
 }
 
-export function LoginForm() {
+function urlErrorMessage(code: string | null): string | null {
+  if (!code) return null;
+  if (code === "guest_disabled") {
+    return "Guest access is no longer available — this app is now connected to Supabase. Please sign in.";
+  }
+  return code;
+}
+
+export function LoginForm({ guestAvailable = false }: { guestAvailable?: boolean }) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const next = searchParams.get("next") ?? "/dashboard";
@@ -38,7 +46,9 @@ export function LoginForm() {
   const [mode, setMode] = useState<"sign-in" | "sign-up">("sign-in");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(
+    urlErrorMessage(searchParams.get("error"))
+  );
   const [notice, setNotice] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -183,6 +193,17 @@ export function LoginForm() {
         >
           Continue with Google
         </Button>
+
+        {guestAvailable && (
+          <form action="/auth/guest" method="post">
+            <Button type="submit" variant="secondary" className="w-full" disabled={busy}>
+              Continue as guest (demo)
+            </Button>
+            <p className="mt-1 text-center text-xs text-muted-foreground">
+              Temporary preview access — disappears once Supabase is connected.
+            </p>
+          </form>
+        )}
 
         <p className="text-center text-sm text-muted-foreground">
           {mode === "sign-in" ? (
