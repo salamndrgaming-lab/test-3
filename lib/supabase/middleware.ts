@@ -1,7 +1,9 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 
-import { publicEnv } from "@/lib/env";
+// Relative import: this file is part of the Edge middleware bundle, where
+// the @/ alias has failed to resolve on Vercel deploys.
+import { publicEnv } from "../env";
 
 /**
  * Refreshes the Supabase session cookie on every request and gates

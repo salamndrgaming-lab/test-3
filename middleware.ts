@@ -1,6 +1,9 @@
 import { type NextRequest } from "next/server";
 
-import { updateSession } from "@/lib/supabase/middleware";
+// Relative import (not the @/ alias): Vercel's Edge Function bundler must
+// fully inline the middleware graph, and aliased specifiers have failed to
+// resolve there ("referencing unsupported modules" deploy error).
+import { updateSession } from "./lib/supabase/middleware";
 
 export async function middleware(request: NextRequest) {
   return await updateSession(request);
