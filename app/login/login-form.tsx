@@ -22,6 +22,14 @@ const credentialsSchema = z.object({
   password: z.string().min(8, "Password must be at least 8 characters"),
 });
 
+function friendlyError(err: unknown): string {
+  const message = err instanceof Error ? err.message : String(err);
+  if (message.includes("NEXT_PUBLIC_SUPABASE")) {
+    return "This deployment isn't connected to Supabase yet — the site owner needs to add the Supabase environment variables in Vercel and redeploy.";
+  }
+  return message;
+}
+
 export function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -46,7 +54,14 @@ export function LoginForm() {
     }
 
     setBusy(true);
-    const supabase = createClient();
+    let supabase: ReturnType<typeof createClient>;
+    try {
+      supabase = createClient();
+    } catch (err) {
+      setError(friendlyError(err));
+      setBusy(false);
+      return;
+    }
 
     if (mode === "sign-in") {
       const { error } = await supabase.auth.signInWithPassword(parsed.data);
@@ -80,7 +95,14 @@ export function LoginForm() {
   async function handleGoogle() {
     setError(null);
     setBusy(true);
-    const supabase = createClient();
+    let supabase: ReturnType<typeof createClient>;
+    try {
+      supabase = createClient();
+    } catch (err) {
+      setError(friendlyError(err));
+      setBusy(false);
+      return;
+    }
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
       options: {
