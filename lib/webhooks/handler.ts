@@ -115,7 +115,13 @@ export async function processStripeEvent(
     }
 
     await store.markEventProcessed(event.id);
-    return { outcome: "processed", action: event.type };
+    return {
+      outcome: "processed",
+      action: event.type,
+      ...(event.type === "charge.dispute.created"
+        ? { evidenceNeededFor: dispute.id }
+        : {}),
+    };
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     await store.markEventFailed(event.id, message);

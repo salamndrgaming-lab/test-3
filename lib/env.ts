@@ -13,6 +13,8 @@ const serverEnvSchema = z.object({
   STRIPE_CONNECT_CLIENT_ID: z.string().startsWith("ca_"),
   STRIPE_WEBHOOK_SECRET: z.string().startsWith("whsec_"),
   NEXT_PUBLIC_APP_URL: z.string().url(),
+  /** Vercel cron authentication token (optional; set in production). */
+  CRON_SECRET: z.string().min(16).optional(),
 });
 
 export type ServerEnv = z.infer<typeof serverEnvSchema>;

@@ -164,6 +164,42 @@ describe("Stripe webhook endpoint", () => {
     });
   });
 
+  describe("evidence gathering trigger", () => {
+    it("fires the callback for created disputes only", async () => {
+      const triggered: string[] = [];
+      const onEvidenceNeeded = (id: string) => triggered.push(id);
+
+      await handleStripeWebhookRequest(
+        signedWebhookRequest(
+          disputeEvent({ eventId: "evt_t1", dispute: { disputeId: "dp_t" } })
+        ),
+        store,
+        onEvidenceNeeded
+      );
+      await handleStripeWebhookRequest(
+        signedWebhookRequest(
+          disputeEvent({
+            eventId: "evt_t2",
+            type: "charge.dispute.updated",
+            dispute: { disputeId: "dp_t" },
+          })
+        ),
+        store,
+        onEvidenceNeeded
+      );
+      // duplicate delivery of the created event must not re-trigger
+      await handleStripeWebhookRequest(
+        signedWebhookRequest(
+          disputeEvent({ eventId: "evt_t1", dispute: { disputeId: "dp_t" } })
+        ),
+        store,
+        onEvidenceNeeded
+      );
+
+      expect(triggered).toEqual(["dp_t"]);
+    });
+  });
+
   describe("charge.dispute.updated", () => {
     it("refreshes Stripe fields without regressing our lifecycle status", async () => {
       const created = disputeEvent({

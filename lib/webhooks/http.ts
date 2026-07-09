@@ -13,7 +13,12 @@ import type { WebhookStore } from "./types";
  */
 export async function handleStripeWebhookRequest(
   request: Request,
-  store: WebhookStore
+  store: WebhookStore,
+  /**
+   * Invoked when a processed event created a dispute that needs evidence
+   * gathering. The route schedules the actual work post-response (after()).
+   */
+  onEvidenceNeeded?: (stripeDisputeId: string) => void
 ): Promise<NextResponse> {
   const signature = request.headers.get("stripe-signature");
   if (!signature) {
@@ -39,6 +44,9 @@ export async function handleStripeWebhookRequest(
 
   try {
     const result = await processStripeEvent(event, store);
+    if (result.outcome === "processed" && result.evidenceNeededFor && onEvidenceNeeded) {
+      onEvidenceNeeded(result.evidenceNeededFor);
+    }
     return NextResponse.json({ received: true, ...result });
   } catch (err) {
     // Processing failed after the event was claimed: return 500 so Stripe

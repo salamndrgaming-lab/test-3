@@ -93,6 +93,11 @@ export interface WebhookStore {
 }
 
 export type WebhookProcessResult =
-  | { outcome: "processed"; action: string }
+  | {
+      outcome: "processed";
+      action: string;
+      /** Set when a freshly created dispute needs evidence gathering. */
+      evidenceNeededFor?: string;
+    }
   | { outcome: "duplicate" }
   | { outcome: "ignored"; reason: string };

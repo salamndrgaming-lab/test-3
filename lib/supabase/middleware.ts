@@ -60,7 +60,9 @@ function gate(
     path === "/" ||
     path.startsWith("/login") ||
     path.startsWith("/auth") ||
-    path.startsWith("/api/webhooks");
+    path.startsWith("/api/webhooks") ||
+    // Cron endpoints authenticate themselves via CRON_SECRET bearer token.
+    path.startsWith("/api/cron");
 
   // Guest sessions only count while guest mode is available; once Supabase
   // is configured the cookie is ignored and real auth takes over.
