@@ -11,8 +11,11 @@ success-based (% of recovered revenue).
 
 - ✅ **Phase 1 — Foundation**: auth (email + Google), Stripe Connect onboarding,
   full DB schema with dispute lifecycle, verified + idempotent dispute webhooks
-- ⬜ Phase 2 — Evidence Engine
-- ⬜ Phase 3 — AI Response Engine
+- ✅ **Phase 2 — Evidence Engine**: reason-code → evidence weighting config with
+  Visa/Mastercard citations, Stripe evidence collector, normalized bundles with
+  gap detection, daily sweep cron
+- ✅ **Phase 3 — AI Response Engine**: two-pass drafting (Claude Opus 4.8) with
+  adversarial QA and programmatic no-fabrication validation
 - ⬜ Phase 4 — Dashboard
 - ⬜ Phase 5 — Hardening
 
@@ -81,3 +84,14 @@ npm test          # webhook integration tests (signature verification,
   the tenant from the connected account id.
 - **Success fee:** calculation only for now — recorded on won outcomes at the
   org's `fee_rate` (default 15%), no payment collection yet.
+- **AI response engine (two-pass):** a drafting pass produces the narrative +
+  a mapping onto Stripe's dispute evidence object (structured outputs via
+  `messages.parse`); an adversarial QA pass critiques it as the issuing bank's
+  reviewer. A programmatic validator independently checks every submitted
+  value and every identifier in the narrative against the evidence bundle —
+  fabricated evidence can never pass, even if QA misses it. Lifecycle
+  auto-advances to `drafted` only when validation AND QA pass; otherwise the
+  response is stored with `needs_human_review` for the dashboard.
+- **Pipeline:** webhook ack → `after()` → gather evidence → draft + QA; the
+  daily sweep cron retries disputes stuck in `new` (no evidence) or
+  `evidence_gathering` (no response — e.g. `ANTHROPIC_API_KEY` was absent).

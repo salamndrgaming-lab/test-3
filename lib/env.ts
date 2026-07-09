@@ -15,6 +15,10 @@ const serverEnvSchema = z.object({
   NEXT_PUBLIC_APP_URL: z.string().url(),
   /** Vercel cron authentication token (optional; set in production). */
   CRON_SECRET: z.string().min(16).optional(),
+  /** Anthropic API key — required for the AI response engine. */
+  ANTHROPIC_API_KEY: z.string().min(1).optional(),
+  /** Override the drafting/QA model (defaults to claude-opus-4-8). */
+  ANTHROPIC_MODEL: z.string().min(1).optional(),
 });
 
 export type ServerEnv = z.infer<typeof serverEnvSchema>;

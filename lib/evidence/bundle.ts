@@ -335,16 +335,14 @@ export function summarizePriorCharges(
 }
 
 /**
- * Determines which reason-weighted evidence fields the bundle can and
- * cannot support, so drafting can lean on strengths and acknowledge gaps
- * rather than fabricate.
+ * Which Stripe evidence fields this bundle can actually support. Shared by
+ * gap computation and by the draft validator (fields not present here must
+ * never be submitted).
  */
-export function computeGaps(
+export function evidenceFieldPresence(
   bundle: Omit<EvidenceBundle, "gaps">
-): EvidenceBundle["gaps"] {
-  const config = configForReason(bundle.dispute.reason);
-
-  const present: Record<StripeEvidenceField, boolean> = {
+): Record<StripeEvidenceField, boolean> {
+  return {
     customer_name: Boolean(bundle.customer?.name ?? bundle.charge.billing.name),
     customer_email_address: Boolean(
       bundle.customer?.email ?? bundle.charge.billing.email ?? bundle.charge.receiptEmail
@@ -375,6 +373,18 @@ export function computeGaps(
     refund_refusal_explanation: false,
     uncategorized_text: true,
   };
+}
+
+/**
+ * Determines which reason-weighted evidence fields the bundle can and
+ * cannot support, so drafting can lean on strengths and acknowledge gaps
+ * rather than fabricate.
+ */
+export function computeGaps(
+  bundle: Omit<EvidenceBundle, "gaps">
+): EvidenceBundle["gaps"] {
+  const config = configForReason(bundle.dispute.reason);
+  const present = evidenceFieldPresence(bundle);
 
   return config.evidence
     .filter((item) => !present[item.field])
