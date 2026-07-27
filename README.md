@@ -16,7 +16,9 @@ success-based (% of recovered revenue).
   gap detection, daily sweep cron
 - ✅ **Phase 3 — AI Response Engine**: two-pass drafting (Claude Opus 4.8) with
   adversarial QA and programmatic no-fabrication validation
-- ⬜ Phase 4 — Dashboard
+- ✅ **Phase 4 — Dashboard**: dispute queue (deadline countdown, AI confidence),
+  detail view with inline editing + one-click submit to Stripe, outcomes/win-rate
+  view with fee math, per-reason-code auto-submit settings
 - ⬜ Phase 5 — Hardening
 
 ## Local setup
@@ -37,7 +39,9 @@ success-based (% of recovered revenue).
 1. In test mode, enable Connect (Dashboard → Connect).
 2. Settings → Connect → Onboarding options → OAuth: enable OAuth for standard
    accounts, add redirect URI `http://localhost:3000/api/stripe/connect/callback`,
-   and copy the client id (`ca_...`).
+   and copy the client id (`ca_...`). The app requests `read_write` scope —
+   required to submit dispute evidence. Accounts connected before Phase 4 were
+   `read_only` and must be reconnected to enable submission.
 3. Developers → Webhooks → Add endpoint:
    - URL: `https://YOUR-DOMAIN/api/webhooks/stripe` (locally: `stripe listen
      --forward-to localhost:3000/api/webhooks/stripe`)

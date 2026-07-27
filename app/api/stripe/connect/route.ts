@@ -22,7 +22,8 @@ export async function GET() {
   const authorize = new URL("https://connect.stripe.com/oauth/authorize");
   authorize.searchParams.set("response_type", "code");
   authorize.searchParams.set("client_id", env.STRIPE_CONNECT_CLIENT_ID);
-  authorize.searchParams.set("scope", "read_only");
+  // read_write: submitting dispute evidence writes to the connected account.
+  authorize.searchParams.set("scope", "read_write");
   authorize.searchParams.set("state", state);
   authorize.searchParams.set(
     "redirect_uri",

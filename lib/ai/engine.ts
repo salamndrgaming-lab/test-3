@@ -1,4 +1,5 @@
 import { evidenceBundleSchema, type EvidenceBundle } from "@/lib/evidence/bundle";
+import { submitDisputeEvidence } from "@/lib/submission";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { anthropicConfigured, runDraftPass, runQAPass } from "./passes";
 import type { DraftOutput, QAOutput } from "./schemas";
@@ -77,7 +78,7 @@ export async function generateResponseForDispute(
 
   const { data: dispute, error: disputeError } = await db
     .from("disputes")
-    .select("id, org_id, status")
+    .select("id, org_id, status, reason, organizations(auto_submit_reasons)")
     .eq("stripe_dispute_id", stripeDisputeId)
     .single();
   if (disputeError || !dispute) {
@@ -134,6 +135,25 @@ export async function generateResponseForDispute(
         .eq("status", "evidence_gathering");
       if (statusError) {
         return { ok: false, stripeDisputeId, error: `status update failed: ${statusError.message}` };
+      }
+    }
+
+    // Per-reason auto-submit: only ever from a QA-passed draft.
+    if (result.qaPassed) {
+      const org = Array.isArray(dispute.organizations)
+        ? dispute.organizations[0]
+        : dispute.organizations;
+      const autoReasons =
+        (org as { auto_submit_reasons: string[] } | null)?.auto_submit_reasons ?? [];
+      if (autoReasons.includes(dispute.reason)) {
+        const submitted = await submitDisputeEvidence({
+          disputeId: dispute.id,
+          orgId: dispute.org_id,
+          submittedBy: null,
+        });
+        if (!submitted.ok) {
+          console.error(`Auto-submit failed for ${stripeDisputeId}: ${submitted.error}`);
+        }
       }
     }
 
