@@ -63,13 +63,33 @@ export default async function KeysPage({
   const isGuest = isGuestModeAvailable() && (await cookies()).has(GUEST_COOKIE);
   if (isGuest) {
     return (
-      <main>
+      <main className="space-y-6">
+        <div>
+          <h2 className="text-xl font-semibold tracking-tight">API keys</h2>
+          <p className="text-sm text-muted-foreground">
+            Authenticate your agents against the ingest API. Only a hash is stored.
+          </p>
+        </div>
         <Alert>
           <AlertTitle>Guest mode</AlertTitle>
           <AlertDescription>
-            API keys are stored per organization and activate once Supabase is configured.
+            Keys are stored per organization and activate once Supabase is configured.
+            Here&apos;s what the integration looks like:
           </AlertDescription>
         </Alert>
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base">Send your first run</CardTitle>
+            <CardDescription>
+              POST batches of runs + trace events. The Idempotency-Key makes retries safe.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <pre className="overflow-x-auto rounded-lg bg-[#1a1a19] p-4 text-xs leading-relaxed text-[#c3c2b7]">
+              {ingestSnippet(process.env.NEXT_PUBLIC_APP_URL ?? "https://your-domain")}
+            </pre>
+          </CardContent>
+        </Card>
       </main>
     );
   }
@@ -91,6 +111,13 @@ export default async function KeysPage({
 
   return (
     <main className="space-y-6">
+      <div>
+        <h2 className="text-xl font-semibold tracking-tight">API keys</h2>
+        <p className="text-sm text-muted-foreground">
+          Authenticate your agents against the ingest API. Only a hash is stored.
+        </p>
+      </div>
+
       {flags.error && (
         <Alert variant="destructive">
           <AlertDescription>{flags.error}</AlertDescription>
@@ -114,10 +141,10 @@ export default async function KeysPage({
       )}
 
       <Card>
-        <CardHeader>
-          <CardTitle>API keys</CardTitle>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base">Keys</CardTitle>
           <CardDescription>
-            Keys authenticate your agents against the ingest API. Only a hash is stored.
+            Create one key per environment. Revocation takes effect immediately.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -126,55 +153,68 @@ export default async function KeysPage({
             <Button type="submit">Create key</Button>
           </form>
 
-          {keys.length > 0 && (
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b text-left text-muted-foreground">
-                  <th className="pb-2 pr-4 font-medium">Name</th>
-                  <th className="pb-2 pr-4 font-medium">Key</th>
-                  <th className="pb-2 pr-4 font-medium">Created</th>
-                  <th className="pb-2 pr-4 font-medium">Last used</th>
-                  <th className="pb-2 font-medium"></th>
-                </tr>
-              </thead>
-              <tbody>
-                {keys.map((key) => (
-                  <tr key={key.id} className="border-b last:border-0">
-                    <td className="py-2 pr-4">{key.name}</td>
-                    <td className="py-2 pr-4 font-mono text-xs">{key.key_prefix}…</td>
-                    <td className="py-2 pr-4">{new Date(key.created_at).toLocaleDateString()}</td>
-                    <td className="py-2 pr-4">
-                      {key.last_used_at ? new Date(key.last_used_at).toLocaleString() : "never"}
-                    </td>
-                    <td className="py-2 text-right">
-                      {key.revoked_at ? (
-                        <Badge variant="secondary">revoked</Badge>
-                      ) : (
-                        <form action={revokeApiKey}>
-                          <input type="hidden" name="keyId" value={key.id} />
-                          <Button type="submit" variant="outline" size="sm">
-                            Revoke
-                          </Button>
-                        </form>
-                      )}
-                    </td>
+          {keys.length === 0 ? (
+            <div className="rounded-lg border border-dashed py-8 text-center text-sm text-muted-foreground">
+              No keys yet — create one to start streaming runs.
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b text-left text-xs uppercase tracking-wide text-muted-foreground">
+                    <th className="pb-2 pr-4 font-medium">Name</th>
+                    <th className="pb-2 pr-4 font-medium">Key</th>
+                    <th className="pb-2 pr-4 font-medium">Created</th>
+                    <th className="pb-2 pr-4 font-medium">Last used</th>
+                    <th className="pb-2 font-medium"></th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {keys.map((key) => (
+                    <tr
+                      key={key.id}
+                      className="border-b transition-colors last:border-0 hover:bg-muted/50"
+                    >
+                      <td className="py-2.5 pr-4 font-medium">{key.name}</td>
+                      <td className="py-2.5 pr-4 font-mono text-xs text-muted-foreground">
+                        {key.key_prefix}…
+                      </td>
+                      <td className="py-2.5 pr-4 text-muted-foreground">
+                        {new Date(key.created_at).toLocaleDateString()}
+                      </td>
+                      <td className="py-2.5 pr-4 text-muted-foreground">
+                        {key.last_used_at ? new Date(key.last_used_at).toLocaleString() : "never"}
+                      </td>
+                      <td className="py-2.5 text-right">
+                        {key.revoked_at ? (
+                          <Badge variant="secondary">revoked</Badge>
+                        ) : (
+                          <form action={revokeApiKey}>
+                            <input type="hidden" name="keyId" value={key.id} />
+                            <Button type="submit" variant="outline" size="sm">
+                              Revoke
+                            </Button>
+                          </form>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           )}
         </CardContent>
       </Card>
 
       <Card>
-        <CardHeader>
-          <CardTitle>Send your first run</CardTitle>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base">Send your first run</CardTitle>
           <CardDescription>
             POST batches of runs + trace events. The Idempotency-Key makes retries safe.
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <pre className="overflow-x-auto rounded-md bg-muted p-3 text-xs">
+          <pre className="overflow-x-auto rounded-lg bg-[#1a1a19] p-4 text-xs leading-relaxed text-[#c3c2b7]">
             {ingestSnippet(appUrl)}
           </pre>
         </CardContent>
